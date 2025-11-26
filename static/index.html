@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800">
+
+    <div class="max-w-2xl mx-auto pt-10 px-4">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl font-extrabold text-indigo-600 mb-2">Social Media Content Analyzer</h1>
+            <p class="text-gray-500">Upload your PDF or Image (Screenshot) to get AI-powered feedback.</p>
+        </header>
+
+        <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100">
+            <form id="uploadForm" class="flex flex-col items-center gap-4">
+                <div class="w-full">
+                    <label class="block mb-2 text-sm font-medium text-gray-900" for="file_input">Upload file</label>
+                    <input class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none p-2" 
+                           id="file_input" type="file" accept=".pdf,image/*" required>
+                </div>
+                
+                <button type="submit" 
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">
+                    Analyze Content
+                </button>
+            </form>
+        </div>
+
+        <div id="loading" class="hidden mt-8 text-center">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <p class="mt-2 text-indigo-600 font-medium">Extracting text & Analyzing...</p>
+        </div>
+
+        <div id="error" class="hidden mt-6 p-4 bg-red-100 text-red-700 rounded-lg border border-red-200"></div>
+
+        <div id="results" class="hidden mt-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100 mb-10">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">Analysis Results</h2>
+            
+            <div class="bg-gray-100 p-3 rounded mb-6 text-xs text-gray-500 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
+                <span class="font-bold">Extracted Snippet:</span> <span id="snippet"></span>
+            </div>
+
+            <div id="ai-content" class="prose prose-indigo max-w-none">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('file_input');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorDiv = document.getElementById('error');
+        const snippetSpan = document.getElementById('snippet');
+        const aiContent = document.getElementById('ai-content');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            // Reset UI
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Something went wrong');
+                }
+
+                // Success
+                snippetSpan.textContent = data.original_text_snippet;
+                aiContent.innerHTML = marked.parse(data.analysis); // Convert Markdown to HTML
+                results.classList.remove('hidden');
+
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
